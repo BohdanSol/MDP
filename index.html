@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <style>
+        #container {
+            width:90vw;
+            margin: 0 auto;
+            max-width:700px;
+        }
+        .value {
+            font-family: arial;
+            margin:0;
+            padding-top:7px;
+            display:inline-block;
+            width: calc(100%/7.2);
+            height:30px;
+            text-align: center;
+            background-color: #f2f2f2;
+            border: 1px solid #000;
+        }
+    </style>
+    <title>Метод ДП - Соловей</title>
+</head>
+    
+
+<body>
+    <div id="container"></div>
+
+    <script type="text/javascript">
+
+        var steps =                 4;                          // кількість кроків
+        var need =                  [150,50,100,100];           // потреба ресурсу
+        var startingValue =         100;                        // початкове значення
+        var endingValue =           0;                          // кінцеве значення
+        var valueStep =             50;                         // розмір партії
+        var valueLimit =            300;                        // потужність складів на кінець і-го кроку не більше...
+        var storageCosts =          [0,8,30,41,50,52,54];       // витрати на зберігання
+        var replenishmentCosts =    [0,48,40,32,24,21,20];      // витрати на поповнення
+        var states = findAllPossible(valueStep,valueLimit);     // можливі стани  
+        var almostLastStep = need[need.length - 2];
+        
+        var i = 1;
+        var k = 0, l = 0, j = 0, n = 0, h = 0, hh = 0; // змінні-ітератори
+        var x_i,u_1,u_i, stepCounter = [0];
+
+
+        var result = createMatrix(1,7);
+
+        // Головний цикл
+
+        while(i <= steps){ // прямий хід
+            switch(i){
+                case 1: 
+                    u_1 = findFirstStepPossibleControl(valueStep,valueLimit);
+                    for(k = 0; k < u_1.length; k++){
+                        result[k][0] = startingValue;
+                        result[k][1] = u_1[k];
+                        result[k][2] = u_1[k] + result[k][0] - need[i-1];
+                        result[k][3] = z(result[k][0],result[k][1]);
+                        addRow(result);
+                        n = k;
+                        nn = k;
+                    }
+                    stepCounter.push(result.length - 1);
+                    n++;
+                    break;                
+                case steps-1:
+                    x_i = [];
+                    u_i = [];
+                    for(x = stepCounter[i-2]; x < stepCounter[i-1];x++){
+                        x_i = pushUnique(x_i,result[x][2]);
+                    }
+                    h = 0;
+                    hh = 0;
+                    //console.log(x_i);
+                    for(l = stepCounter[i-1]; l < x_i.length + stepCounter[i - 1]; l++){
+                        u_i = findAlmostLastStepPossibleControl(x_i[h],i);
+                        //console.log(u_i);
+                        for(j = 0; j < u_i.length; j++){
+                            addRow(result);
+                        }
+                        h++;
+                    }
+                    for(l = stepCounter[i-1]; l < x_i.length + stepCounter[i - 1]; l++){
+                        u_i = findAlmostLastStepPossibleControl(x_i[hh],i);
+                        for(j = 0; j < u_i.length; j++){
+                            nn++;
+                            result[nn][0] = x_i[hh];
+                            result[nn][1] = u_i[j];
+                            result[nn][2] = u_i[j] + result[nn][0] - need[i-1];
+                            result[nn][3] = z(result[nn][0],result[nn][1]);
+                        }
+                        hh++;
+                    }
+                    //console.log(result);
+                    stepCounter.push(result.length - 1);
+                    break;
+                case steps: 
+                    x_i = [];
+                    u_i = [];
+                    for(x = stepCounter[i-2]; x < stepCounter[i-1];x++){
+                        x_i = pushUnique(x_i,result[x][2]);
+                    }
+                    h = 0;
+                    hh = 0;
+                    //console.log(x_i);
+                    for(l = stepCounter[i-1]; l < x_i.length + stepCounter[i - 1]; l++){
+                        u_i = findLastStepPossibleControl(x_i[h],i);
+                        //console.log(u_i);
+                        for(j = 0; j < u_i.length; j++){
+                            addRow(result);
+                        }
+                        h++;
+                    }
+                    for(l = stepCounter[i-1]; l < x_i.length + stepCounter[i - 1]; l++){
+                        u_i = findLastStepPossibleControl(x_i[hh],i);
+                        for(j = 0; j < u_i.length; j++){
+                            nn++;
+                            result[nn][0] = x_i[hh];
+                            result[nn][1] = u_i[j];
+                            result[nn][2] = u_i[j] + result[nn][0] - need[i-1];
+                            result[nn][3] = z(result[nn][0],result[nn][1]);
+                        }
+                        hh++;
+                    }
+                    stepCounter.push(result.length - 1);
+                    break;
+                default:
+                    x_i = [];
+                    u_i = [];
+                    for(x = stepCounter[i-2]; x < stepCounter[i-1];x++){
+                        x_i = pushUnique(x_i,result[x][2]);
+                    }
+                    h = 0;
+                    hh = 0;
+                    for(l = stepCounter[i-1]; l < x_i.length + stepCounter[i - 1]; l++){
+                        u_i = findStepPossibleControl(x_i[h],i);
+                        for(j = 0; j < u_i.length; j++){
+                            addRow(result);
+                        }
+                        h++;
+                    }
+                    for(l = stepCounter[i-1]; l < x_i.length + stepCounter[i - 1]; l++){
+                        u_i = findStepPossibleControl(x_i[hh],i);
+                        for(j = 0; j < u_i.length; j++){
+                            nn++;
+                            result[nn][0] = x_i[hh];
+                            result[nn][1] = u_i[j];
+                            result[nn][2] = u_i[j] + result[nn][0] - need[i-1];
+                            result[nn][3] = z(result[nn][0],result[nn][1]);
+                        }
+                        hh++;
+                    }
+                    stepCounter.push(result.length - 1);
+                    break;                    
+            }
+            i++;
+        }
+        console.log(stepCounter);
+        console.log(result);
+
+
+        k = 0; l = 0; j = 0; n = 0;
+        var zSteps = steps;
+
+
+        
+        while(zSteps >= 1){ // зворотній хід
+            switch(zSteps){
+                case steps:
+                    for(k = stepCounter[zSteps-1]; k <= stepCounter[zSteps]-1; k++){
+                        result[k][4] = 0;
+                        result[k][5] = result[k][4] + result[k][3];
+                        result[k][6] = result[k][5];
+                    }
+                    break;
+                default:
+                    for(k = stepCounter[zSteps-1]; k < stepCounter[zSteps]; k++){
+                        result[k][4] = getPreviousBellman(k,zSteps);
+                        result[k][5] = result[k][4] + result[k][3];
+                    }
+                    for(h = stepCounter[zSteps-1]; h < stepCounter[zSteps]; h++){
+                        result[h][6] = findMinFrom(result[h][0], zSteps);
+                    }
+                    break;
+            }
+            zSteps--;
+        }
+
+
+
+        function findMinFrom(num, st){
+            var min = stepCounter[st-1];
+            var max = stepCounter[st];
+            var counter = 0;
+            var counted = [];
+            while(min < max){
+                if(result[min][0] == num){
+                    counter++;
+                    counted.push(result[min][5]);
+                }
+                min++;
+            }
+            var res = 10000;
+            for(let q = 0; q < counter;q++){
+                if(counted[q] < res){
+                    res = counted[q];
+                }
+            }
+            return res;
+        }
+        function getPreviousBellman(k,st){
+            var arr = [];
+            var res;
+            for(let x = stepCounter[st]; x <= stepCounter[st+1]-1; x++){
+                arr = pushUnique(arr,result[x][0]);
+            }
+            for(let x = stepCounter[st-1]; x <= stepCounter[st]-1; x++){
+                for(let y = stepCounter[st]; y <= stepCounter[st+1]-1; y++){
+                    if(result[y][0] == result[k][2]){
+                        return result[y][6];
+                    }
+                }
+            }
+        }
+        /*function getBellmanForNumber(number, st) {
+
+        }*/
+        function addRow(arr){
+            arr.push([0,0,0,0,0,0,0]);
+        }
+        function pushUnique(x_i, res){
+            var arr = x_i;
+            var toPush = true;
+            for(var m = 0; m <= x_i.length; m++){
+                if(x_i[m] == res){
+                    toPush = false;
+                }
+            }
+            if(toPush){
+                    arr.push(res);
+            }
+            return arr;
+        }
+        function createMatrix(rows,columns){ // для полегшеного створення масиву одразу із нульовими елементами
+            var arr = new Array();
+            for(var i=0; i<rows; i++){
+                arr[i] = new Array();
+                for(var j=0; j<columns; j++){
+                    arr[i][j] = 0;
+                }
+            }
+            return arr;
+        }
+        function findLastStepPossibleControl(x,st) { // функція яка повертає масив варіантів всіх можливих станів з врахуванням того, що кінцевими запасами будуть 0
+            var arr = [];
+            if(x == need[st-1]){
+                arr.push(0);
+            } else if(x < need[st-1]){
+                arr.push(need[st-1] - x);
+            } else {
+                arr.push("lol");
+            }
+            return arr;
+        }
+        function findAlmostLastStepPossibleControl(x,st) { // функція яка повертає масив варіантів всіх можливих станів з врахуванням попиту для передостаннього кроку (щоб на останньому не було залишку)
+            var s = 0;
+            var arr = [];
+            while(s <= valueLimit){
+                if((s + x - need[st-1]) <= need[st] && (s + x - need[st-1]) <= valueLimit){
+                    if((s + x - need[st-1]) >= 0){
+                        arr.push(s);
+                    }
+                }
+                s += valueStep;
+            }
+            return arr;
+        }
+        function findStepPossibleControl(x,st) { // функція яка повертає масив варіантів всіх можливих станів з врахуванням попиту для всіх кроків окрім 1 і останнього
+            var s = 0;
+            var arr = [];
+            while(s <= valueLimit){
+                if((s + x - need[st-1]) >= need[st-1] && (s + x - need[st-1]) < valueLimit){
+                    if((s - need[st-1]) >= 0){
+                        arr.push(s - need[st-1]);
+                    }
+                }
+                s += valueStep;
+            }
+            return arr;
+        }
+        function findFirstStepPossibleControl(v_st,lim) { // функція яка повертає масив варіантів всіх можливих станів з врахуванням попиту для першого кроку
+            var s = 0;
+            var arr = [];
+            while(s <= lim + v_st){
+                if((s + startingValue - need[0]) > 0 ){
+                    arr.push(s + startingValue - need[0]);
+                }
+                s += v_st;
+            }
+            return arr;
+        }
+        function findAllPossible(v_st,lim) { // функція яка повертає масив варіантів всіх можливих станів
+            var s = 0;  
+            var arr = [];
+            while(s <= lim){
+                arr.push(s);
+                s += v_st;
+            }
+            return arr;
+        }
+        function z(x,u) {  // функція яка повертає значення z(xi,ui)
+            var z = find(storageCosts,x) + find(replenishmentCosts,u);
+            return z;
+        }
+        function find(array, value) {
+            if(value == 0){
+                return 0;
+            }
+            else {
+                var s = value/50;
+                return array[s];
+            }
+        }
+
+        // Обчислення кінцевих значень керування
+
+        var x_min = [];
+        var u_min = [100,0,200,0];
+
+
+        // Вивід результатів
+
+        for(var c = 0; c < result.length - 1; c++){
+            for(var cc = 0; cc < 7; cc++){
+                var cell = document.createElement('div');
+                cell.classList.add('value');
+                cell.innerHTML = result[c][cc];
+                document.getElementById('container').appendChild(cell);
+            }
+            if(isEqual(c+1, stepCounter)){
+                document.getElementById('container').innerHTML += `<hr>`;
+            }
+        }
+        document.getElementById('container').innerHTML += `<h3>Опитимальне керування на кожному із кроків = ${u_min}</h3>`;
+        function isEqual(num1, arr){
+            for(let i = 0; i < arr.length - 1; i++){
+                if(arr[i] == num1){
+                    return true;
+                }
+            }
+            return false;
+        }
+    </script>
+</body>
+</html>
